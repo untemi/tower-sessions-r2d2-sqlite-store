@@ -1,9 +1,11 @@
 use async_trait::async_trait;
+use time::OffsetDateTime;
+
 use r2d2_sqlite::{
     SqliteConnectionManager,
     rusqlite::{Error as SqlError, OptionalExtension, params},
 };
-use time::OffsetDateTime;
+
 use tower_sessions_core::{
     SessionStore,
     session::{Id, Record},
@@ -48,7 +50,7 @@ impl SqliteStore {
         }
     }
 
-    pub fn migrate(&self) -> anyhow::Result<()> {
+    pub fn migrate(&self) -> session_store::Result<()> {
         let query = r#"
             create table if not exists tower_sessions (
                 id text primary key not null,
@@ -56,8 +58,10 @@ impl SqliteStore {
                 expiry_date integer not null
             )"#;
 
-        let conn = self.pool.get()?;
-        conn.execute(query, [])?;
+        let conn = self.pool.get().map_err(SqliteStoreError::R2d2)?;
+
+        conn.execute(query, [])
+            .map_err(SqliteStoreError::Rusqlite)?;
 
         Ok(())
     }
