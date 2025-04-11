@@ -107,26 +107,21 @@ impl SqliteStore {
 #[async_trait]
 impl SessionStore for SqliteStore {
     async fn create(&self, record: &mut Record) -> session_store::Result<()> {
-        println!("CREATE");
         while self.try_create_with_conn(record)? {
             record.id = Id::default();
         }
 
         self.save_with_conn(&record)?;
 
-        println!("DONE CREATE");
         Ok(())
     }
 
     async fn save(&self, record: &Record) -> session_store::Result<()> {
-        println!("SAVE");
         self.save_with_conn(record)?;
-        println!("DONE SAVE");
         Ok(())
     }
 
     async fn load(&self, session_id: &Id) -> session_store::Result<Option<Record>> {
-        println!("LOAD");
         let query = r#"
             select data from tower_sessions
             where id = ? and expiry_date > ?
@@ -149,7 +144,6 @@ impl SessionStore for SqliteStore {
             .optional()
             .map_err(SqliteStoreError::Rusqlite)?;
 
-        println!("DONE LOAD");
         match data {
             Some(data) => {
                 let record: Record =
@@ -161,15 +155,12 @@ impl SessionStore for SqliteStore {
     }
 
     async fn delete(&self, session_id: &Id) -> session_store::Result<()> {
-        println!("DELETE");
         let query = "delete from tower_sessions where id = ?";
-
         let conn = self.pool.get().map_err(SqliteStoreError::R2d2)?;
 
         conn.execute(query, params![session_id.to_string()])
             .map_err(SqliteStoreError::Rusqlite)?;
 
-        println!("DONE DELETE");
         Ok(())
     }
 }
